@@ -1,8 +1,25 @@
-## 使用 NodeJs 爬取腾讯视频电影数据（只爬分类下的电影数据）
+## 使用 NodeJs 爬取腾讯视频电影数据
 
 ### 爬虫又称网络机器人，是一种按照一定的规则，自动地抓取万维网信息的程序或者脚本；通俗的讲就是模拟人进行浏览器操作。
 
-## 此功能作为node入门课程练习，使用node服务端请求要抓取数据的网站源代码配合正则表达式抓取电影数据，并在控制台打印抓取进度。
+### 此功能作为node入门课程练习，使用node服务端请求要抓取数据的网站源代码配合正则表达式抓取电影数据。
+
+### 目录结构
+```bash
+├── movies                     # 保存所有数据的目录
+│   │── 地区                    # 地区分类下的所有数据
+│   │── 类型                    # 类型分类下的所有数据
+│   │── 年份                    # 年份分类下的所有数据
+│   │── 排序                    # 排序分类下的所有数据
+│   └── 特色                    # 特色分类下的所有数据
+├── index.js                   # 入口文件，爬取所有电影数据
+├── movies.js                  # 封装的爬虫方法
+├── progress-bar.js            # 封装的控制台打印方法
+├── server.js                  # 启动web服务，输出数据到页面
+├── tool-fs                    # 对fs进行二次封装
+└── package.json               # package.json 依赖
+```
+
 
 ### 思路：
 
@@ -29,17 +46,53 @@ async function req(url) {
 ### 2. 请求腾讯视频电影页面
 ``` js
 let movieMainUrl = 'https://v.qq.com/channel/movie?listpage=1&channel=movie&sort=18&_all=1'
-// 获取电影分类链接
-async function getMovieTypeUrl() {
+/**
+ * 获取分类电影数据
+ * @param {*} index 0:排序，1：类型，2：地区，3：特色，4：年份
+ * @param {*} key sort:排序，itype：类型，iarea：地区，characteristic：特色，year：年份
+ */
+async function getTypeMovieList(key) {
   let {
     body
   } = await req(movieMainUrl)
+
+  let val = '' , index = 0
+  switch(key) {
+    case "sort" :
+        val = "itype"
+        index = 0
+      break;
+      case "itype" :
+        val = "iarea"
+        index = 1
+      break;
+      case "iarea" :
+        val = "characteristic"
+        index = 2
+      break;
+      case "characteristic" :
+        val = "year"
+        index = 3
+      break;
+      case "year" :
+        val = "charge"
+        index = 4
+      break;
+      default:
+        key = "itype"
+        val = "iarea"
+        index = 1
+      break;
+  }
+
   // 获取分类大模块内容
-  let regexp = /<div class="filter_line filter_line_1 " data-key="itype">(.*?)<div class="filter_line filter_line_2 " data-key="iarea">/igs
+  let regStr = `<div class="filter_line filter_line_${index} " data-key="${key}">(.*?)<div class="filter_line filter_line_${index+1} " data-key="${val}">`
+  let regexp = new RegExp(regStr, "igs")
   let result = regexp.exec(body)[1]
 
   // 匹配分类名a标签部分内容
-  let regexp2 = /<a href="(.*?)" class="filter_item(.*?) data-key="itype"(.*?)>(.*?)<\/a>/igs
+  let regStr2 = `<a href="(.*?)" class="filter_item(.*?) data-key="${key}"(.*?)>(.*?)<\\/a>`
+  let regexp2 = new RegExp(regStr2, "igs")
   let result2
   let typeList = []
   let tmpList = [] // 存放类型的临时数组
@@ -222,7 +275,7 @@ async function getMoviesDetail(url) {
 const http = require('http');
 
 (async () => {
-  let postHTML = await getMovieTypeUrl()
+  let postHTML = await getTypeMovieList()
   http.createServer(function (req, res) {
     req.on('data', function (chunk) {
     });
@@ -237,4 +290,18 @@ const http = require('http');
   }).listen(3000);
   console.log('http://localhost:3000')
 })()
+```
+
+### 6. 保存数据到本地文件
+``` js
+async function createMovieFile(key, dirname) {
+  let movies = await getTypeMovieList(key)
+  let path = `movies/${dirname}`
+  await createDir(path)
+  movies.forEach(async (item) => {
+    await writeFile(path + '/' + item.type + '.json', JSON.stringify(item.list))
+  });
+}
+
+createMovieFile('sort', '排序')
 ```
