@@ -5,7 +5,7 @@ const {
 const {
   createDir,
   writeFile
-} = require('./tool-fs');
+} = require('../tool-fs');
 
 // 创建不同类型的文件夹，并存入相应分类下的数据
 async function createMovieFile(key, dirname) {

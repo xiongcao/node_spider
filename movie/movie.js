@@ -1,5 +1,5 @@
 const request = require('request')
-const ProgressBar = require('./progress-bar');
+const ProgressBar = require('../progress-bar');
 
 let pb = new ProgressBar('爬取进度', 100);
 let movieMainUrl = 'https://v.qq.com/channel/movie?listpage=1&channel=movie&sort=18&_all=1'
