@@ -1,0 +1,15 @@
+{
+  "name": "reptile",
+  "version": "1.0.0",
+  "description": "爬取腾讯视频网站电影数据",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "xiongchao",
+  "license": "ISC",
+  "dependencies": {
+    "request": "^2.88.2",
+    "single-line-log": "^1.1.2"
+  }
+}

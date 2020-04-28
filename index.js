@@ -1,15 +1,12 @@
-# 使用 NodeJs 爬取腾讯视频电影数据（只爬分类下的电影数据）
-
-## 爬虫又称网络机器人，是一种按照一定的规则，自动地抓取万维网信息的程序或者脚本；通俗的讲就是模拟人进行浏览器操作。
-
-## 此功能作为node入门课程练习，使用node服务端请求要抓取数据的网站源代码配合正则表达式抓取电影数据，并在控制台打印抓取进度。
-
-## 思路：
-
-### 1. 封装request请求
-``` js
 const request = require('request')
+const ProgressBar = require('./progress-bar');
+const http = require('http');
 
+let pb = new ProgressBar('爬取进度', 100);
+
+let movieMainUrl = 'https://v.qq.com/channel/movie?listpage=1&channel=movie&sort=18&_all=1'
+
+// 封装get请求
 async function req(url) {
   return new Promise((resolve, reject) => {
     request.get(url, (err, res, body) => {
@@ -24,11 +21,7 @@ async function req(url) {
     })
   })
 }
-```
 
-### 2. 请求腾讯视频电影页面
-``` js
-let movieMainUrl = 'https://v.qq.com/channel/movie?listpage=1&channel=movie&sort=18&_all=1'
 // 获取电影分类链接
 async function getMovieTypeUrl() {
   let {
@@ -59,31 +52,7 @@ async function getMovieTypeUrl() {
   }
   return typeList
 }
-```
 
-### 3. 获取列表页电影数据
-
-由于需要在控制台打印爬取进度，需要引入一个包 **single-line-log** ,并对其进行封装。
-``` js
-yarn add single-line-log
-```
-
-封装文件为 progress-bar.js, 简单使用如下：
-``` js
-// 引入模块
-const ProgressBar = require('./progress-bar');
-
-/**
- * params1: 标题
- * params2: 长度
- */
-let pb = new ProgressBar('爬取进度', 100);
-
-// 跟新进度条
-pb.render({ completed: num, total: total });
-```
-
-``` js
 // 获取分类下的所有电影
 async function getMovies(url, size, index) {
   let {
@@ -171,10 +140,8 @@ async function getMovies(url, size, index) {
   }
   return typeList
 }
-```
 
-### 4. 详情页获取 年份、导演、tag、地区、简介等信息
-``` js
+// 详情页获取 年份、导演、tag、地区、简介等信息
 async function getMoviesDetail(url) {
   let {
     body
@@ -208,6 +175,7 @@ async function getMoviesDetail(url) {
   // 获取地区
   let area = res.substring(5, res.length - 1)
 
+
   return {
     director,
     desc,
@@ -215,11 +183,6 @@ async function getMoviesDetail(url) {
     area
   }
 }
-```
-
-### 5. 开启web服务，将抓取到的数据输出到页面查看，或者保存到本地
-``` js
-const http = require('http');
 
 (async () => {
   let postHTML = await getMovieTypeUrl()
@@ -237,4 +200,3 @@ const http = require('http');
   }).listen(3000);
   console.log('http://localhost:3000')
 })()
-```
