@@ -32,6 +32,32 @@ function readFile(path, options = {
   })
 }
 
+// 创建目录
+function createDir(path) {
+  return new Promise((resolve, reject) => {
+    fs.mkdir(path, (err) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
+// 删除目录
+function rmDir(path) {
+  return new Promise((resolve, reject) => {
+    fs.rmdir(path, (err) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
 // 写入文件
 function writeFile(path, data, options = {
   encoding: 'utf8',
@@ -52,5 +78,7 @@ function writeFile(path, data, options = {
 module.exports = {
   readDir,
   readFile,
-  writeFile
+  writeFile,
+  createDir,
+  rmDir
 }
