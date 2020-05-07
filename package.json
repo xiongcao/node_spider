@@ -1,7 +1,7 @@
 {
-  "name": "reptile",
+  "name": "spider",
   "version": "1.0.0",
-  "description": "爬取腾讯视频网站电影数据",
+  "description": "爬取网站电影、表情包、音乐数据",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
