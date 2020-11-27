@@ -3,6 +3,7 @@ const UUID = require('uuid');
 const fs = require('fs');
 
 const mysql = require('mysql');
+const { CLIENT_RENEG_WINDOW } = require('tls');
 let connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
@@ -52,10 +53,10 @@ async function req(url) {
   // await getSinger('http://localhost:8000/top/artists?limit=20&offset=80', 1);
 
 
-  await getSinger('http://localhost:8000/toplist/artist?type=2', 2); // 华语歌手
-  // await getSinger('http://localhost:8000/toplist/artist?type=3', 3); // 欧美歌手
-  // await getSinger('http://localhost:8000/toplist/artist?type=4', 4); // 日本歌手
-  // await getSinger('http://localhost:8000/toplist/artist?type=5', 5); // 韩国歌手
+  // await getSinger('http://localhost:8000/toplist/artist?type=1', 1); // 华语歌手
+  // await getSinger('http://localhost:8000/toplist/artist?type=2', 2); // 欧美歌手
+  // await getSinger('http://localhost:8000/toplist/artist?type=3', 3); // 日本歌手
+  // await getSinger('http://localhost:8000/toplist/artist?type=4', 4); // 韩国歌手
 
   // 榜单（歌单）32
   // await getTopList('http://localhost:8000/toplist/detail');
@@ -97,7 +98,32 @@ async function req(url) {
   // await updateSongDateTime('http://localhost:8000/top/artists?limit=20&offset=80', 1);
 
 
+  // 添加专辑简介
+  // await addAlbumBrief()
+
 })()
+
+async function addAlbumBrief() {
+  const idList = await querySql(`SELECT * FROM album where brief = ''`);
+  for (let i = 0; i < idList.length; i++) {
+    const item = idList[i];
+    let album
+    try {
+      const res = await req('http://localhost:8000/album?id=' + item.album_id);
+      album = res.album || {};
+    } catch (error) {
+    } finally {
+      if (album && album.id) {
+        await querySql(`UPDATE album SET brief = ? WHERE album_id = ?`, [album.description, item.album_id]);
+        console.log('第' + i + '条');
+        await sleep(getRandom(2000, 4000));
+        continue
+      }
+    }
+    console.log('第' + i + '条');
+  }
+  console.log('完成');
+}
 
 async function getTagAndCategory(url) {
   const { categories, sub } = await req(url);
@@ -172,11 +198,16 @@ async function getSinger(url, type) {
 
 
     /** 歌手 Begin */
-    // 下载歌手图片
-    await download(artist.picUrl, './singerImages/', artist.picId + '.jpg');
-
-    singerList.splice(0, 0, UUID.v1(), artist.id, artist.accountId || artist.id, 'e10adc3949ba59abbe56e057f20f883e', artist.name, artist.picUrl, artist.musicSize, artist.mvSize, artist.albumSize, artist.briefDesc, artist.alias.toString(), new Date().getTime(), new Date().getTime(), 0);
-    singerParams.push(singerList);
+    if (artist && artist.id) {
+      try {
+        // 下载歌手图片
+        await download(artist.picUrl, './singerImages/', artist.picId + '.jpg').catch(err => console.log(err));
+      } catch (error) {
+        console.log(error)
+      }
+      singerList.splice(0, 0, UUID.v1(), artist.id, artist.accountId || artist.id, 'e10adc3949ba59abbe56e057f20f883e', artist.name, artist.picUrl, artist.musicSize, artist.mvSize, artist.albumSize, artist.briefDesc, artist.alias.toString(), new Date().getTime(), new Date().getTime(), 0);
+      singerParams.push(singerList);
+    }
     /** 歌手 End */
 
     /** 歌曲 Begin */
@@ -215,7 +246,7 @@ async function getSinger(url, type) {
       }
 
       // 添加歌词
-      const { lrc } = await req('http://localhost:8000/lyric?id=' + song.id);
+      const { lrc } = await req('http://localhost:8000/lyric?id=' + song.id).catch(err => console.log(err));
 
       if (lrc) {
         const { lyric, version } = lrc;
@@ -225,7 +256,7 @@ async function getSinger(url, type) {
       }
       /** 歌词 End */
 
-      await sleep(getRandom(1000, 1500))
+      await sleep(getRandom(2000, 4000))
     }
 
     // 批量添加歌词
@@ -259,15 +290,22 @@ async function getSinger(url, type) {
         console.log('albumId重复：' + album.id)
         continue;
       }
-      // 下载专辑图片
-      await download(album.picUrl, './albumImages/', album.picId + '.jpg');
-      let albumList = [UUID.v1(), album.id, v.id, album.name, album.picUrl, album.briefDesc, getRandom(2000, 50000), getRandom(1000, 10000), album.publishTime, album.subType, album.company, album.type, new Date().getTime(), new Date().getTime(), 0];
-      albumParams.push(albumList);
+      if (album && album.id) {
+        try {
+          // 下载专辑图片
+          await download(album.picUrl, './albumImages/', album.picId + '.jpg').catch(err => console.log(err));
+        } catch (error) {
+          console.log(error)
+        }
+        let albumList = [UUID.v1(), album.id, v.id, album.name, album.picUrl, album.briefDesc, getRandom(2000, 50000), getRandom(1000, 10000), album.publishTime, album.subType, album.company, album.type, new Date().getTime(), new Date().getTime(), 0];
+        albumParams.push(albumList);
+      }
     }
     if (albumParams.length !== 0) {
       await querySql(albumSql, [albumParams]); // 添加专辑
     }
     /** 专辑 End */
+    await sleep(getRandom(2000, 4000))
 
     console.log('第' + (i + 1) + '条');
 
@@ -500,9 +538,13 @@ async function addSingerType() {
 async function download(url, path, filename) {
   filename = UUID.v1().toLocaleUpperCase() + '==' + filename;
   try {
-    await request(url).pipe(fs.createWriteStream(path + filename, { autoClose: true }))
+    await request(url).pipe(fs.createWriteStream(path + filename, { autoClose: true })).on('close', (e) => {
+      console.log(e)
+    })
   } catch (error) {
     console.log(err)
+  } finally {
+    await 1;
   }
 }
 
